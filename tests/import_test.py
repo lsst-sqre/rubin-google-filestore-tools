@@ -4,7 +4,7 @@ import rubin_google_filestore_tools
 
 def test_import() -> None:
     """Test that module imported and we can create an object."""
-    bkt = rubin_google_filestore_tools.filestore.FilestoreTool(
+    bkt = rubin_google_filestore_tools.FilestoreTool(
         project="my-project",
         location="us-central1-c",
         instance="my-filestore",

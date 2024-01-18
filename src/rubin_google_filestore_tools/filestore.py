@@ -1,4 +1,7 @@
-"""Create, list, and purge Google backups."""
+"""Work with Google Filestore shares.
+
+Initially, create, list, and purge backups.
+"""
 
 import datetime
 import logging
