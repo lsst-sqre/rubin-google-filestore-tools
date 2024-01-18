@@ -5,3 +5,5 @@ mypy
 
 # Testing
 pytest
+pytest-cov
+
