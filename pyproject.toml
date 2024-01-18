@@ -26,18 +26,11 @@ disallow_incomplete_defs = true
 ignore_missing_imports = true
 local_partial_types = true
 no_implicit_reexport = true
-plugins = ["pydantic.mypy"]
 show_error_codes = true
 strict_equality = true
 warn_redundant_casts = true
 warn_unreachable = true
 warn_unused_ignores = true
-
-[tool.pydantic-mypy]
-init_forbid_extra = true
-init_typed = true
-warn_required_dynamic_aliases = true
-warn_untyped_fields = true
 
 # The rule used with Ruff configuration is to disable every lint that has
 # legitimate exceptions that are not dodgy code, rather than cluttering code
@@ -112,25 +105,7 @@ select = ["ALL"]
 target-version = "py311"
 
 [tool.ruff.per-file-ignores]
-"controller/src/controller/constants.py" = [
-    "S108",    # constructing /tmp paths for Kubernetes Pods
-]
-"controller/src/controller/handlers/**" = [
-    "D103",    # FastAPI handlers should not have docstrings
-]
-"controller/src/controller/services/**" = [
-    "S108",    # constructing /tmp paths for Kubernetes Pods
-]
-"docs/**" = [
-    "INP001",  # Python files are embedded diagrams
-]
-"noxfile.py" = [
-    "T201",    # print makes sense as output from nox rules
-]
-"spawner/tests/**" = [
-    "UP017",   # spawner has to support Python 3.10, UTC was added in 3.11
-]
-"*/tests/**" = [
+"tests/**" = [
     "C901",    # tests are allowed to be complex, sometimes that's convenient
     "D101",    # tests don't need docstrings
     "D103",    # tests don't need docstrings
