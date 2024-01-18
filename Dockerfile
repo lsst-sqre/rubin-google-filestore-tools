@@ -1,4 +1,4 @@
-# Docker build instructions for the Nublado controller.
+# Docker build instructions for rubin-google-filestore-tools
 #
 # This Dockerfile has four stages:
 #
@@ -6,10 +6,9 @@
 #   Updates the base Python image with security patches and common system
 #   packages. This image becomes the base of all other images.
 # install-image
-#   Installs third-party dependencies (controller/requirements/main.txt)
+#   Installs third-party dependencies (requirements/main.txt)
 #   into a virtual environment and then installs the app. This virtual
-#   environment is the only thing copied into the runtime image.  copying
-#   across build stages.
+#   environment is the only thing copied into the runtime image.
 # runtime-image
 #   - Copies the virtual environment into place.
 #   - Runs a non-root user.
@@ -44,7 +43,7 @@ RUN pip install --quiet --no-cache-dir -r requirements.txt
 # Install the Python package.
 COPY . /workdir
 WORKDIR /workdir
-RUN pip install --no-cache-dir ./controller
+RUN pip install --no-cache-dir .
 
 FROM base-image AS runtime-image
 
