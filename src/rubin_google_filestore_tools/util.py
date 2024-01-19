@@ -3,6 +3,7 @@
 import datetime
 
 DEFAULT_BACKUP_PREFIX = "bk-"
+ENV_PREFIX = "RUBIN_GOOGLE_FILESTORE_TOOLS_"
 
 
 def backup_name_from_datetime(
@@ -22,3 +23,11 @@ def backup_name_from_datetime(
         f"{prefix}{utc.year}{utc.month:02d}{utc.day:02d}"
         f"{utc.hour:02d}{utc.minute:02d}{utc.second:02d}z"
     )
+
+
+def str_bool(inp: str) -> bool:
+    """Convert a string into our best guess at its boolean meaning."""
+    inp = inp.upper()
+    if not inp or inp.startswith(("F", "N")):
+        return False
+    return True

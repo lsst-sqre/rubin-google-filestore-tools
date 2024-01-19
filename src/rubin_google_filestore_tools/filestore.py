@@ -52,7 +52,9 @@ class FilestoreTool:
         self._instance_parent = f"projects/{project}/locations/{location}"
         self._backup_parent = f"projects/{project}/locations/{self._zone}"
         self._name = f"{self.instance}/{self.share_name}"
-        self._logger.debug(f"BackupTool initialized for {self._name}")
+        self._logger.debug(f"FilestoreTool initialized for {self._name}")
+
+    # Backup API
 
     async def backup(self, prefix: str | None = None) -> None:
         """Create a backup."""
@@ -67,10 +69,8 @@ class FilestoreTool:
             ),
             backup_id=backup_id,
         )
-        # Fire and forget; weirdly, the AsyncClient has a sync method,
-        #  but the thing that is returned is an AsyncResponse.  Forget
-        #  it, Jake, it's Googletown.
         self._logger.info(f"Backup requested for {self._name}")
+        # Fire-and-forget
         await self._client.create_backup(request=request)
 
     async def list_backups(self, prefix: str | None = None) -> list[str]:
@@ -99,10 +99,10 @@ class FilestoreTool:
         self._logger.debug(f"Backups for {self._name}: {backup_list}")
         return backup_list
 
-    async def delete_backups(
+    async def purge_backups(
         self, keep: int = 6, prefix: str | None = None
     ) -> None:
-        """Delete all but 'keep' backups for this file share."""
+        """Purge all but 'keep' backups for this file share."""
         if keep < 1:
             raise ValueError("'keep' must be a positive integer")
         backups = await self.list_backups(prefix=prefix)
