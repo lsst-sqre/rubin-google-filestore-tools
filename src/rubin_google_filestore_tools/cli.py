@@ -1,6 +1,5 @@
 """Command-line interface for Google Filestore tools."""
 import argparse
-import asyncio
 import os
 
 from .filestore import FilestoreTool
@@ -93,11 +92,11 @@ def create_backup() -> None:
     """Create a backup."""
     args = _parse_backup_args()
     tool = _backup_tool(args)
-    asyncio.run(tool.backup(prefix=args.prefix))
+    tool.backup(prefix=args.prefix)
 
 
 def purge_backups() -> None:
     """Purge all but 'keep' backups."""
     args = _parse_backup_args()
     tool = _backup_tool(args)
-    asyncio.run(tool.purge_backups(prefix=args.prefix, keep=args.keep))
+    tool.purge_backups(prefix=args.prefix, keep=args.keep)

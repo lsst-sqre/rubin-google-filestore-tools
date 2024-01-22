@@ -42,48 +42,48 @@ class FilestoreTool:
         components = location.split("-")
         if len(components) != 3:
             raise ValueError("Location must be a zone, e.g. 'us-central1-b1")
-        self._zone = f"{components[0]}-{components[1]}"
+        region = f"{components[0]}-{components[1]}"
         self.share_name = share_name
         # Unless we're using Enterprise Filestores (we don't as of
         #  January 2024), this is always "share1".
 
         # Default credentials should be fine--we will use WorkloadIdentity
-        self._client = filestore_v1.CloudFilestoreManagerAsyncClient()
-        self._instance_parent = f"projects/{project}/locations/{location}"
-        self._backup_parent = f"projects/{project}/locations/{self._zone}"
+        self._client = filestore_v1.CloudFilestoreManagerClient()
+        locs = f"projects/{project}/locations/"
+        self._zone_parent = f"{locs}{location}"
+        self._region_parent = f"{locs}{region}"
         self._name = f"{self.instance}/{self.share_name}"
         self._logger.debug(f"FilestoreTool initialized for {self._name}")
 
     # Backup API
 
-    async def backup(self, prefix: str | None = None) -> None:
+    def backup(self, prefix: str | None = None) -> None:
         """Create a backup."""
         now = datetime.datetime.now(tz=datetime.UTC)
         backup_id = backup_name_from_datetime(now, prefix=prefix)
+        backup_obj = filestore_v1.types.Backup(
+            description=f"Backup for {self._name} at {now!s}",
+            source_instance=f"{self._zone_parent}/instances/{self.instance}",
+            source_file_share=self.share_name,
+        )
         request = filestore_v1.types.CreateBackupRequest(
-            parent=self._backup_parent,
-            backup=filestore_v1.types.Backup(
-                description=(f"Backup for {self._name} at {now!s}"),
-                source_instance=self.instance,
-                source_file_share=self.share_name,
-            ),
+            parent=self._region_parent,
+            backup=backup_obj,
             backup_id=backup_id,
         )
         self._logger.info(f"Backup requested for {self._name}")
         # Fire-and-forget
-        await self._client.create_backup(request=request)
+        self._client.create_backup(request=request)
 
-    async def list_backups(self, prefix: str | None = None) -> list[str]:
+    def list_backups(self, prefix: str | None = None) -> list[str]:
         """List backups in Ready state for this file share."""
         if prefix is None:
             prefix = DEFAULT_BACKUP_PREFIX
         backup_list: list[str] = []
-        request = filestore_v1.ListBackupsRequest(parent=self._backup_parent)
-        page_result = await self._client.list_instances(request=request)
-        async for response in page_result:
-            backup = await response
+        results = self._client.list_backups(parent=self._region_parent)
+        for backup in results:
             # Pull out instance and backup ID
-            instance_id = backup.instance.split("/")[-1]
+            instance_id = backup.source_instance.split("/")[-1]
             backup_id = backup.name.split("/")[-1]
             # Only match the right ones for this file share
             if (
@@ -93,26 +93,48 @@ class FilestoreTool:
                 and backup.state == filestore_v1.types.Backup.State.READY
             ):
                 backup_list.append(backup_id)
+                self._logger.debug(f"Matched backup {backup_id}/{instance_id}")
+            else:
+                rej_str = f"Rejected backup {backup_id}/{instance_id}"
+                if backup.source_file_share != self.share_name:
+                    rej_str += (
+                        f" -- File share source {backup.source_file_share}"
+                        f" did not match {self.share_name}"
+                    )
+                if instance_id != self.instance:
+                    rej_str += (
+                        f" -- Instance source {instance_id} did not match"
+                        f" {self.instance}"
+                    )
+                if not backup_id.startswith(prefix):
+                    rej_str += (
+                        f" -- Backup ID {backup_id} does not start"
+                        f" with {prefix}"
+                    )
+                if backup.state != filestore_v1.types.Backup.State.READY:
+                    rej_str += f" -- Backup state {backup.state} is not READY"
+                self._logger.debug(rej_str)
         # Sort backups reverse-lexigraphically, which amounts to
         # sorting them by date, newest first
         backup_list.sort(reverse=True)
         self._logger.debug(f"Backups for {self._name}: {backup_list}")
         return backup_list
 
-    async def purge_backups(
-        self, keep: int = 6, prefix: str | None = None
-    ) -> None:
+    def purge_backups(self, keep: int = 6, prefix: str | None = None) -> None:
         """Purge all but 'keep' backups for this file share."""
         if keep < 1:
             raise ValueError("'keep' must be a positive integer")
-        backups = await self.list_backups(prefix=prefix)
+        backups = self.list_backups(prefix=prefix)
         doomed = backups[keep:]
+        if not doomed:
+            self._logger.info("No backups requested for deletion.")
+            return
         self._logger.info(
             f"Requesting backup deletion for {self._name}: {doomed}"
         )
         for victim in doomed:
             # Also fire-and-forget
             request = filestore_v1.types.DeleteBackupRequest(
-                name=f"{self._backup_parent}/backups/{victim}"
+                name=f"{self._region_parent}/backups/{victim}"
             )
-            await self._client.delete_backup(request=request)
+            self._client.delete_backup(request=request)
