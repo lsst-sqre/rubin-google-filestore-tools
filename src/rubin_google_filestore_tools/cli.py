@@ -15,7 +15,6 @@ def _add_generic_options(
         "--project",
         help="Google project containing filestore",
         default=os.environ.get(f"{ENV_PREFIX}PROJECT"),
-        required=True,
     )
     parser.add_argument(
         "-z",
@@ -23,14 +22,12 @@ def _add_generic_options(
         "--location",
         help="GCP zone containing filestore",
         default=os.environ.get(f"{ENV_PREFIX}ZONE"),
-        required=True,
     )
     parser.add_argument(
         "-i",
         "--instance",
         help="Filestore instance name",
         default=os.environ.get(f"{ENV_PREFIX}INSTANCE"),
-        required=True,
     )
     parser.add_argument(
         "-s",
@@ -42,6 +39,7 @@ def _add_generic_options(
         "-d",
         "--debug",
         "--verbose",
+        action="store_true",
         default=str_bool(os.environ.get(f"{ENV_PREFIX}DEBUG", "")),
         help="Verbose debugging output",
     )
@@ -78,6 +76,15 @@ def _parse_backup_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _validate_args(args: argparse.Namespace) -> None:
+    if not args.project:
+        raise ValueError("Project is required")
+    if not args.zone:
+        raise ValueError("Zone is required")
+    if not args.instance:
+        raise ValueError("Instance is required")
+
+
 def _backup_tool(args: argparse.Namespace) -> FilestoreTool:
     return FilestoreTool(
         project=args.project,
@@ -91,6 +98,7 @@ def _backup_tool(args: argparse.Namespace) -> FilestoreTool:
 def create_backup() -> None:
     """Create a backup."""
     args = _parse_backup_args()
+    _validate_args(args)
     tool = _backup_tool(args)
     tool.backup(prefix=args.prefix)
 
@@ -98,5 +106,8 @@ def create_backup() -> None:
 def purge_backups() -> None:
     """Purge all but 'keep' backups."""
     args = _parse_backup_args()
+    _validate_args(args)
+    if args.keep < 1:
+        raise ValueError("Keep must be at least 1")
     tool = _backup_tool(args)
     tool.purge_backups(prefix=args.prefix, keep=args.keep)
